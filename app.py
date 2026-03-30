@@ -2,23 +2,22 @@ from flask import Flask, jsonify
 from server_api.routes.license_routes import license_bp
 from server_api.models.license_model import init_db
 import os
+import sqlite3
 
 app = Flask(__name__)
 
 # =========================================================
 # 🔥 DATABASE PATH FIX (IMPORTANT)
 # =========================================================
-# 👉 Renderல persistent path use பண்ணணும்
 DB_PATH = os.getenv("DB_PATH", "/app/licenses.db")
-
 print("📂 USING DB PATH:", DB_PATH)
 
 # =========================================================
-# 🔥 SAFE DB INIT (NO CRASH IN RENDER)
+# 🔥 SAFE DB INIT
 # =========================================================
 try:
     print("🚀 Initializing Database...")
-    init_db(DB_PATH)   # ✅ path pass பண்ணுறோம்
+    init_db()   # 🔥 NOTE: no param (as per your model)
     print("✅ DB Ready")
 except Exception as e:
     print("⚠ DB INIT FAILED:", e)
@@ -36,22 +35,21 @@ def home():
     return jsonify({
         "message": "🚀 DiffSense AI License Server Running",
         "status": "ok",
-        "db_path": DB_PATH   # 🔥 debugக்கு useful
+        "db_path": DB_PATH
     })
 
 # =========================================================
-# ❤️ HEALTH CHECK (RENDER)
+# ❤️ HEALTH CHECK
 # =========================================================
 @app.route("/health")
 def health():
     return jsonify({"status": "healthy"})
 
 # =========================================================
-# 🔥 DEBUG ROUTE (CHECK KEYS)
+# 🔥 DEBUG ROUTE (FIXED)
 # =========================================================
 @app.route("/debug/licenses")
 def debug_licenses():
-    import sqlite3
     try:
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
@@ -65,8 +63,11 @@ def debug_licenses():
             "count": len(rows),
             "data": rows
         })
+
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({
+            "error": str(e)
+        })
 
 # =========================================================
 # 🚀 RUN APP
