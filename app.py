@@ -5,13 +5,24 @@ import os
 
 app = Flask(__name__)
 
-# 🔥 INIT DB
-init_db()
+# =========================================================
+# 🔥 SAFE DB INIT (NO CRASH IN RENDER)
+# =========================================================
+try:
+    print("🚀 Initializing Database...")
+    init_db()
+    print("✅ DB Ready")
+except Exception as e:
+    print("⚠ DB INIT FAILED (will retry later):", e)
 
-# 🔗 ROUTES
+# =========================================================
+# 🔗 REGISTER ROUTES
+# =========================================================
 app.register_blueprint(license_bp, url_prefix="/api/license")
 
-
+# =========================================================
+# 🏠 ROOT ROUTE
+# =========================================================
 @app.route("/")
 def home():
     return jsonify({
@@ -19,12 +30,16 @@ def home():
         "status": "ok"
     })
 
-
+# =========================================================
+# ❤️ HEALTH CHECK (RENDER)
+# =========================================================
 @app.route("/health")
 def health():
     return jsonify({"status": "healthy"})
 
-
+# =========================================================
+# 🚀 RUN APP
+# =========================================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
