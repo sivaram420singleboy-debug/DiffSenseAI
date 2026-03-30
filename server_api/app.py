@@ -1,5 +1,5 @@
 from flask import Flask
-from routes.license_routes import license_bp
+from server_api.routes.license_routes import license_bp
 
 app = Flask(__name__)
 
