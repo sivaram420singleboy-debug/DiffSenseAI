@@ -9,7 +9,7 @@ def init_db():
 
     if conn is None:
         print("⚠ DB NOT CONNECTED → SKIPPING INIT")
-        return   # ❗ IMPORTANT (no crash)
+        return
 
     cursor = conn.cursor()
 
