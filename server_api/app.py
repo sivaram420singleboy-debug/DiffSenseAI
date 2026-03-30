@@ -1,17 +1,18 @@
 from flask import Flask, jsonify
 from server_api.routes.license_routes import license_bp
 from server_api.models.license_model import init_db
+import os
 
 app = Flask(__name__)
 
-# 🔥 INIT DATABASE (VERY IMPORTANT)
+# 🔥 INIT DATABASE
 init_db()
 
 # 🔗 REGISTER ROUTES
 app.register_blueprint(license_bp, url_prefix="/api/license")
 
 
-# 🔥 ROOT ROUTE (404 avoid + test)
+# 🔥 ROOT ROUTE
 @app.route("/")
 def home():
     return jsonify({
@@ -26,6 +27,7 @@ def health():
     return jsonify({"status": "healthy"})
 
 
-# ▶ RUN (LOCAL)
+# 🔥 RUN (IMPORTANT FOR RENDER)
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
