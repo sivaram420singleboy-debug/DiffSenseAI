@@ -1,7 +1,7 @@
 from server_api.utils.db_helper import get_connection
 import sqlite3
 
-# 🔥 INIT DB
+# 🔥 INIT DB (AUTO CREATE TABLE)
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
@@ -18,6 +18,7 @@ def init_db():
 
     conn.commit()
     conn.close()
+    print("✅ DB Initialized")
 
 
 # 🔥 CREATE LICENSE (WITH EXPIRY)
@@ -46,16 +47,23 @@ def get_license(key):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT * FROM licenses WHERE license_key=?",
-        (key,)
-    )
+    try:
+        cursor.execute(
+            "SELECT id, license_key, machine_id, is_used, expiry_date FROM licenses WHERE license_key=?",
+            (key,)
+        )
 
-    row = cursor.fetchone()
-    conn.close()
+        row = cursor.fetchone()
+        print("🔎 Fetch License:", row)
 
-    print("🔎 Fetch License:", row)
-    return row
+        return row
+
+    except Exception as e:
+        print("❌ DB ERROR:", e)
+        return None
+
+    finally:
+        conn.close()
 
 
 # 🔥 UPDATE LICENSE (ACTIVATE)
@@ -63,28 +71,40 @@ def update_license(machine_id, key):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        UPDATE licenses
-        SET machine_id=?, is_used=1
-        WHERE license_key=?
-    """, (machine_id, key))
+    try:
+        cursor.execute("""
+            UPDATE licenses
+            SET machine_id=?, is_used=1
+            WHERE license_key=?
+        """, (machine_id, key))
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        print("🔒 License Bound:", machine_id)
 
-    print("🔒 License Bound:", machine_id)
+    except Exception as e:
+        print("❌ UPDATE ERROR:", e)
+
+    finally:
+        conn.close()
 
 
-# 🔁 RESET (TESTING)
+# 🔁 RESET LICENSE (TESTING ONLY)
 def reset_license(key):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        UPDATE licenses
-        SET machine_id=NULL, is_used=0
-        WHERE license_key=?
-    """, (key,))
+    try:
+        cursor.execute("""
+            UPDATE licenses
+            SET machine_id=NULL, is_used=0
+            WHERE license_key=?
+        """, (key,))
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        print("♻ License Reset")
+
+    except Exception as e:
+        print("❌ RESET ERROR:", e)
+
+    finally:
+        conn.close()
