@@ -1,5 +1,5 @@
 from server_api.utils.db_helper import get_connection
-import sqlite3
+
 
 # 🔥 INIT DB (AUTO CREATE TABLE)
 def init_db():
@@ -8,7 +8,7 @@ def init_db():
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS licenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         license_key TEXT UNIQUE,
         machine_id TEXT,
         is_used INTEGER DEFAULT 0,
@@ -18,7 +18,7 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print("✅ DB Initialized")
+    print("✅ DB Initialized (PostgreSQL)")
 
 
 # 🔥 CREATE LICENSE (WITH EXPIRY)
@@ -29,7 +29,7 @@ def create_license(key, expiry):
     try:
         cursor.execute("""
             INSERT INTO licenses (license_key, is_used, machine_id, expiry_date)
-            VALUES (?, 0, NULL, ?)
+            VALUES (%s, 0, NULL, %s)
         """, (key, expiry))
 
         conn.commit()
@@ -48,10 +48,11 @@ def get_license(key):
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            "SELECT id, license_key, machine_id, is_used, expiry_date FROM licenses WHERE license_key=?",
-            (key,)
-        )
+        cursor.execute("""
+            SELECT id, license_key, machine_id, is_used, expiry_date 
+            FROM licenses 
+            WHERE license_key=%s
+        """, (key,))
 
         row = cursor.fetchone()
         print("🔎 Fetch License:", row)
@@ -74,8 +75,8 @@ def update_license(machine_id, key):
     try:
         cursor.execute("""
             UPDATE licenses
-            SET machine_id=?, is_used=1
-            WHERE license_key=?
+            SET machine_id=%s, is_used=1
+            WHERE license_key=%s
         """, (machine_id, key))
 
         conn.commit()
@@ -97,7 +98,7 @@ def reset_license(key):
         cursor.execute("""
             UPDATE licenses
             SET machine_id=NULL, is_used=0
-            WHERE license_key=?
+            WHERE license_key=%s
         """, (key,))
 
         conn.commit()
