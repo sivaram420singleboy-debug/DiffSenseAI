@@ -1,25 +1,29 @@
 import customtkinter as ctk
 
-ctk.set_appearance_mode("dark")
-
 def open_main_app():
+
     app = ctk.CTk()
     app.geometry("600x400")
-    app.title("DiffSenseAI - Dashboard")
+    app.title("DiffSenseAI")
 
     frame = ctk.CTkFrame(app)
-    frame.pack(padx=20, pady=20, fill="both", expand=True)
+    frame.pack(expand=True, fill="both", padx=20, pady=20)
 
     ctk.CTkLabel(
         frame,
-        text="🚀 ImageGrafix",
-        font=("Segoe UI", 24, "bold")
+        text="🚀 DiffSense AI",
+        font=("Arial", 26, "bold")
     ).pack(pady=20)
 
     ctk.CTkLabel(
         frame,
         text="License Activated Successfully ✅",
-        font=("Segoe UI", 14)
+        font=("Arial", 14)
     ).pack(pady=10)
+
+    # 🔥 Future buttons
+    ctk.CTkButton(frame, text="📂 Compare Files").pack(pady=10)
+    ctk.CTkButton(frame, text="🧠 AI Tools").pack(pady=10)
+    ctk.CTkButton(frame, text="📊 Reports").pack(pady=10)
 
     app.mainloop()
