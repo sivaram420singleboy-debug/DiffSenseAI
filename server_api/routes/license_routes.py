@@ -6,10 +6,13 @@ from datetime import datetime, timedelta
 
 license_bp = Blueprint("license", __name__)
 
-print("🔥 USING DB:", os.path.abspath("database/db.sqlite3"))
+# 🔥 DB PATH DEBUG
+print("🔥 USING DB:", os.path.abspath("server_api/database/db.sqlite3"))
 
 
-# 🔑 ACTIVATE LICENSE (GET + POST SUPPORT)
+# =========================================================
+# 🔑 ACTIVATE LICENSE
+# =========================================================
 @license_bp.route("/activate", methods=["GET", "POST"])
 def activate():
     try:
@@ -18,7 +21,7 @@ def activate():
             key = request.args.get("LicenseKey")
             machine = request.args.get("MachineId")
         else:
-            data = request.json
+            data = request.get_json(silent=True) or {}
             key = data.get("LicenseKey")
             machine = data.get("MachineId")
 
@@ -27,50 +30,86 @@ def activate():
 
         # ❌ VALIDATION
         if not key or not machine:
-            return jsonify({"status": "invalid"})
+            return jsonify({
+                "status": "invalid",
+                "message": "LicenseKey / MachineId missing"
+            })
 
         lic = get_license(key)
 
         if not lic:
-            return jsonify({"status": "invalid"})
+            return jsonify({
+                "status": "invalid",
+                "message": "License not found"
+            })
 
         # 👉 (id, key, machine_id, is_used, expiry)
         _, license_key, db_machine, is_used, expiry = lic
 
-        # 🔥 EXPIRY CHECK
+        # =================================================
+        # ⏳ EXPIRY CHECK
+        # =================================================
         if expiry:
             try:
                 expiry_date = datetime.strptime(expiry, "%Y-%m-%d")
-                if datetime.now() > expiry_date:
-                    return jsonify({"status": "expired"})
-            except:
-                pass
 
-        # 🔥 FIRST ACTIVATION
+                if datetime.now() > expiry_date:
+                    return jsonify({
+                        "status": "expired",
+                        "message": "License expired"
+                    })
+
+            except Exception as e:
+                print("⚠️ Expiry parse error:", str(e))
+
+        # =================================================
+        # 🟢 FIRST ACTIVATION
+        # =================================================
         if not is_used:
             update_license(machine, key)
-            return jsonify({"status": "activated"})
 
+            return jsonify({
+                "status": "activated",
+                "message": "License activated successfully"
+            })
+
+        # =================================================
         # 🔁 SAME PC
+        # =================================================
         if db_machine == machine:
-            return jsonify({"status": "already_activated"})
+            return jsonify({
+                "status": "already_activated",
+                "message": "Already activated on this machine"
+            })
 
+        # =================================================
         # ❌ OTHER PC
-        return jsonify({"status": "used_in_other_pc"})
+        # =================================================
+        return jsonify({
+            "status": "used_in_other_pc",
+            "message": "License already used on another device"
+        })
 
     except Exception as e:
         print("❌ ERROR:", str(e))
-        return jsonify({"status": "error"})
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        })
 
 
+# =========================================================
 # 🔥 GENERATE LICENSE (ADMIN)
+# =========================================================
 @license_bp.route("/generate", methods=["POST"])
 def generate():
     try:
-        data = request.json
+        data = request.get_json(silent=True) or {}
 
         days = int(data.get("days", 30))
 
+        # 🔑 UNIQUE KEY
         key = "DSAI-" + str(uuid.uuid4())[:8].upper()
 
         expiry = (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d")
@@ -85,4 +124,8 @@ def generate():
 
     except Exception as e:
         print("❌ ERROR:", str(e))
-        return jsonify({"status": "error"})
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        })
