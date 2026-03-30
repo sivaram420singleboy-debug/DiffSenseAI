@@ -16,7 +16,7 @@ def init_db():
     try:
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS licenses (
-            id SERIAL PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             license_key TEXT UNIQUE,
             machine_id TEXT,
             is_used INTEGER DEFAULT 0,
@@ -25,7 +25,7 @@ def init_db():
         """)
 
         conn.commit()
-        print("✅ DB Initialized")
+        print("✅ SQLite DB Initialized")
 
     except Exception as e:
         print("❌ INIT ERROR:", e)
@@ -49,7 +49,7 @@ def create_license(key, expiry):
     try:
         cursor.execute("""
             INSERT INTO licenses (license_key, is_used, machine_id, expiry_date)
-            VALUES (%s, 0, NULL, %s)
+            VALUES (?, 0, NULL, ?)
         """, (key, expiry))
 
         conn.commit()
@@ -79,7 +79,7 @@ def get_license(key):
         cursor.execute("""
             SELECT id, license_key, machine_id, is_used, expiry_date 
             FROM licenses 
-            WHERE license_key=%s
+            WHERE license_key=?
         """, (key,))
 
         return cursor.fetchone()
@@ -107,8 +107,8 @@ def update_license(machine_id, key):
     try:
         cursor.execute("""
             UPDATE licenses
-            SET machine_id=%s, is_used=1
-            WHERE license_key=%s
+            SET machine_id=?, is_used=1
+            WHERE license_key=?
         """, (machine_id, key))
 
         conn.commit()
@@ -138,7 +138,7 @@ def reset_license(key):
         cursor.execute("""
             UPDATE licenses
             SET machine_id=NULL, is_used=0
-            WHERE license_key=%s
+            WHERE license_key=?
         """, (key,))
 
         conn.commit()
