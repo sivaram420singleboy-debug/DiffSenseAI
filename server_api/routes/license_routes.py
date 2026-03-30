@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models.license_model import get_license, update_license, create_license
+from server_api.models.license_model import get_license, update_license, create_license
 import os
 import uuid
 from datetime import datetime, timedelta
