@@ -1,4 +1,4 @@
-from utils.db_helper import get_connection
+from server_api.utils.db_helper import get_connection
 import sqlite3
 
 # 🔥 INIT DB
