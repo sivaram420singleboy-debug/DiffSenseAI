@@ -11,7 +11,7 @@ print("🔥 USING DB:", os.path.abspath("server_api/database/db.sqlite3"))
 
 
 # =========================================================
-# 🏠 ROOT CHECK (OPTIONAL BUT USEFUL)
+# 🏠 ROOT CHECK
 # =========================================================
 @license_bp.route("/", methods=["GET"])
 def home():
@@ -27,7 +27,7 @@ def home():
 @license_bp.route("/activate", methods=["GET", "POST"])
 def activate():
     try:
-        # 🔥 SUPPORT BOTH METHODS
+        # 🔥 SUPPORT BOTH GET + POST
         if request.method == "GET":
             key = request.args.get("LicenseKey")
             machine = request.args.get("MachineId")
@@ -46,7 +46,7 @@ def activate():
                 "message": "LicenseKey / MachineId missing"
             })
 
-        # 🔍 FETCH
+        # 🔍 FETCH LICENSE
         lic = get_license(key)
 
         if not lic:
@@ -78,12 +78,18 @@ def activate():
         # 🟢 FIRST ACTIVATION
         # =================================================
         if not is_used:
-            update_license(machine, key)
+            success = update_license(machine, key)
 
-            return jsonify({
-                "status": "activated",
-                "message": "License activated successfully"
-            })
+            if success:
+                return jsonify({
+                    "status": "activated",
+                    "message": "License activated successfully"
+                })
+            else:
+                return jsonify({
+                    "status": "error",
+                    "message": "Failed to bind license"
+                })
 
         # =================================================
         # 🔁 SAME MACHINE
@@ -114,7 +120,7 @@ def activate():
 # =========================================================
 # 🔥 GENERATE LICENSE (ADMIN)
 # =========================================================
-@license_bp.route("/generate", methods=["GET", "POST"])
+@license_bp.route("/generate", methods=["POST"])
 def generate():
     try:
         data = request.get_json(silent=True) or {}
@@ -128,7 +134,13 @@ def generate():
 
         print("🆕 Generating License:", key)
 
-        create_license(key, expiry)
+        res = create_license(key, expiry)
+
+        if res.get("status") != "created":
+            return jsonify({
+                "status": "error",
+                "message": "License creation failed"
+            })
 
         return jsonify({
             "status": "created",
@@ -139,6 +151,26 @@ def generate():
     except Exception as e:
         print("❌ GENERATE ERROR:", str(e))
 
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        })
+
+
+# =========================================================
+# 🔥 QUICK TEST ROUTE (REMOVE LATER)
+# =========================================================
+@license_bp.route("/add-test", methods=["GET"])
+def add_test():
+    try:
+        res = create_license("LIC-TEST-001", "2026-12-31")
+
+        return jsonify({
+            "status": "created",
+            "message": "Test license added"
+        })
+
+    except Exception as e:
         return jsonify({
             "status": "error",
             "message": str(e)
