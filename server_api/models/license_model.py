@@ -1,29 +1,48 @@
 from server_api.utils.db_helper import get_connection
 
 
-# 🔥 INIT DB (AUTO CREATE TABLE)
+# =========================================================
+# 🔥 INIT DB (SAFE VERSION)
+# =========================================================
 def init_db():
     conn = get_connection()
+
+    if conn is None:
+        raise Exception("❌ DB NOT CONNECTED")
+
     cursor = conn.cursor()
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS licenses (
-        id SERIAL PRIMARY KEY,
-        license_key TEXT UNIQUE,
-        machine_id TEXT,
-        is_used INTEGER DEFAULT 0,
-        expiry_date TEXT
-    )
-    """)
+    try:
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS licenses (
+            id SERIAL PRIMARY KEY,
+            license_key TEXT UNIQUE,
+            machine_id TEXT,
+            is_used INTEGER DEFAULT 0,
+            expiry_date TEXT
+        )
+        """)
 
-    conn.commit()
-    conn.close()
-    print("✅ DB Initialized (PostgreSQL)")
+        conn.commit()
+        print("✅ DB Initialized (PostgreSQL)")
+
+    except Exception as e:
+        print("❌ INIT ERROR:", e)
+
+    finally:
+        cursor.close()
+        conn.close()
 
 
-# 🔥 CREATE LICENSE (WITH EXPIRY)
+# =========================================================
+# 🔥 CREATE LICENSE
+# =========================================================
 def create_license(key, expiry):
     conn = get_connection()
+
+    if conn is None:
+        raise Exception("❌ DB NOT CONNECTED")
+
     cursor = conn.cursor()
 
     try:
@@ -39,12 +58,20 @@ def create_license(key, expiry):
         print("⚠ Error creating license:", e)
 
     finally:
+        cursor.close()
         conn.close()
 
 
+# =========================================================
 # 🔥 GET LICENSE
+# =========================================================
 def get_license(key):
     conn = get_connection()
+
+    if conn is None:
+        print("❌ DB NOT CONNECTED")
+        return None
+
     cursor = conn.cursor()
 
     try:
@@ -64,12 +91,19 @@ def get_license(key):
         return None
 
     finally:
+        cursor.close()
         conn.close()
 
 
-# 🔥 UPDATE LICENSE (ACTIVATE)
+# =========================================================
+# 🔥 UPDATE LICENSE
+# =========================================================
 def update_license(machine_id, key):
     conn = get_connection()
+
+    if conn is None:
+        raise Exception("❌ DB NOT CONNECTED")
+
     cursor = conn.cursor()
 
     try:
@@ -86,12 +120,19 @@ def update_license(machine_id, key):
         print("❌ UPDATE ERROR:", e)
 
     finally:
+        cursor.close()
         conn.close()
 
 
-# 🔁 RESET LICENSE (TESTING ONLY)
+# =========================================================
+# 🔁 RESET LICENSE
+# =========================================================
 def reset_license(key):
     conn = get_connection()
+
+    if conn is None:
+        raise Exception("❌ DB NOT CONNECTED")
+
     cursor = conn.cursor()
 
     try:
@@ -108,4 +149,5 @@ def reset_license(key):
         print("❌ RESET ERROR:", e)
 
     finally:
+        cursor.close()
         conn.close()
