@@ -9,7 +9,7 @@ def get_connection():
             user=os.environ.get("DB_USER"),
             password=os.environ.get("DB_PASS"),
             port=os.environ.get("DB_PORT"),
-            sslmode="require"   # 🔥 THIS IS THE FIX
+            sslmode="require"
         )
 
         print("✅ DB CONNECTED")

@@ -2,13 +2,14 @@ from server_api.utils.db_helper import get_connection
 
 
 # =========================================================
-# 🔥 INIT DB (SAFE VERSION)
+# 🔥 INIT DB (SAFE - NO CRASH)
 # =========================================================
 def init_db():
     conn = get_connection()
 
     if conn is None:
-        raise Exception("❌ DB NOT CONNECTED")
+        print("⚠ DB NOT CONNECTED → SKIPPING INIT")
+        return   # ❗ IMPORTANT (no crash)
 
     cursor = conn.cursor()
 
@@ -24,7 +25,7 @@ def init_db():
         """)
 
         conn.commit()
-        print("✅ DB Initialized (PostgreSQL)")
+        print("✅ DB Initialized")
 
     except Exception as e:
         print("❌ INIT ERROR:", e)
@@ -41,7 +42,7 @@ def create_license(key, expiry):
     conn = get_connection()
 
     if conn is None:
-        raise Exception("❌ DB NOT CONNECTED")
+        return {"status": "db_error"}
 
     cursor = conn.cursor()
 
@@ -52,10 +53,11 @@ def create_license(key, expiry):
         """, (key, expiry))
 
         conn.commit()
-        print("✅ License Created:", key)
+        return {"status": "created"}
 
     except Exception as e:
         print("⚠ Error creating license:", e)
+        return {"status": "error"}
 
     finally:
         cursor.close()
@@ -69,7 +71,6 @@ def get_license(key):
     conn = get_connection()
 
     if conn is None:
-        print("❌ DB NOT CONNECTED")
         return None
 
     cursor = conn.cursor()
@@ -81,10 +82,7 @@ def get_license(key):
             WHERE license_key=%s
         """, (key,))
 
-        row = cursor.fetchone()
-        print("🔎 Fetch License:", row)
-
-        return row
+        return cursor.fetchone()
 
     except Exception as e:
         print("❌ DB ERROR:", e)
@@ -102,7 +100,7 @@ def update_license(machine_id, key):
     conn = get_connection()
 
     if conn is None:
-        raise Exception("❌ DB NOT CONNECTED")
+        return False
 
     cursor = conn.cursor()
 
@@ -114,10 +112,11 @@ def update_license(machine_id, key):
         """, (machine_id, key))
 
         conn.commit()
-        print("🔒 License Bound:", machine_id)
+        return True
 
     except Exception as e:
         print("❌ UPDATE ERROR:", e)
+        return False
 
     finally:
         cursor.close()
@@ -131,7 +130,7 @@ def reset_license(key):
     conn = get_connection()
 
     if conn is None:
-        raise Exception("❌ DB NOT CONNECTED")
+        return False
 
     cursor = conn.cursor()
 
@@ -143,10 +142,11 @@ def reset_license(key):
         """, (key,))
 
         conn.commit()
-        print("♻ License Reset")
+        return True
 
     except Exception as e:
         print("❌ RESET ERROR:", e)
+        return False
 
     finally:
         cursor.close()
