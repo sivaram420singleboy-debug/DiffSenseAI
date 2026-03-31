@@ -6,20 +6,18 @@ import sqlite3
 app = Flask(__name__)
 
 # =========================================================
-# 🔥 DATABASE PATH (RENDER SAFE)
+# 🔥 DATABASE PATH (RENDER SAFE FIX)
 # =========================================================
-DB_PATH = os.getenv("DB_PATH", "/app/licenses.db")
+# 👉 IMPORTANT: /app remove pannirukom
+DB_PATH = os.getenv("DB_PATH", "licenses.db")
 print("📂 USING DB PATH:", DB_PATH)
 
 
 # =========================================================
-# 🔥 INIT DB (FIXED VERSION)
+# 🔥 INIT DB (FINAL FIXED)
 # =========================================================
 def init_db():
     try:
-        # 👉 Ensure /app folder exists (IMPORTANT)
-        os.makedirs("/app", exist_ok=True)
-
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
 
@@ -100,7 +98,7 @@ def debug_licenses():
 
 
 # =========================================================
-# 🔥 ADD TEST LICENSE (TEMP)
+# 🔥 ADD TEST LICENSE
 # =========================================================
 @app.route("/debug/add")
 def add_test_key():
