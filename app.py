@@ -1,31 +1,58 @@
 from flask import Flask, jsonify
 from server_api.routes.license_routes import license_bp
-from server_api.models.license_model import init_db
 import os
 import sqlite3
 
 app = Flask(__name__)
 
 # =========================================================
-# 🔥 DATABASE PATH FIX (IMPORTANT)
+# 🔥 DATABASE PATH (RENDER SAFE)
 # =========================================================
 DB_PATH = os.getenv("DB_PATH", "/app/licenses.db")
 print("📂 USING DB PATH:", DB_PATH)
 
+
 # =========================================================
-# 🔥 SAFE DB INIT
+# 🔥 INIT DB (FIXED VERSION)
 # =========================================================
-try:
-    print("🚀 Initializing Database...")
-    init_db()   # 🔥 NOTE: no param (as per your model)
-    print("✅ DB Ready")
-except Exception as e:
-    print("⚠ DB INIT FAILED:", e)
+def init_db():
+    try:
+        # 👉 Ensure /app folder exists (IMPORTANT)
+        os.makedirs("/app", exist_ok=True)
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS licenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            license_key TEXT UNIQUE,
+            machine_id TEXT,
+            is_used INTEGER DEFAULT 0
+        )
+        """)
+
+        conn.commit()
+        conn.close()
+
+        print("✅ DB Created + Table Ready")
+
+    except Exception as e:
+        print("❌ DB INIT ERROR:", e)
+
+
+# =========================================================
+# 🔥 RUN DB INIT
+# =========================================================
+print("🚀 Initializing Database...")
+init_db()
+
 
 # =========================================================
 # 🔗 REGISTER ROUTES
 # =========================================================
 app.register_blueprint(license_bp, url_prefix="/api/license")
+
 
 # =========================================================
 # 🏠 ROOT ROUTE
@@ -38,6 +65,7 @@ def home():
         "db_path": DB_PATH
     })
 
+
 # =========================================================
 # ❤️ HEALTH CHECK
 # =========================================================
@@ -45,8 +73,9 @@ def home():
 def health():
     return jsonify({"status": "healthy"})
 
+
 # =========================================================
-# 🔥 DEBUG ROUTE (FIXED)
+# 🔥 DEBUG ROUTE
 # =========================================================
 @app.route("/debug/licenses")
 def debug_licenses():
@@ -68,6 +97,29 @@ def debug_licenses():
         return jsonify({
             "error": str(e)
         })
+
+
+# =========================================================
+# 🔥 ADD TEST LICENSE (TEMP)
+# =========================================================
+@app.route("/debug/add")
+def add_test_key():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+
+        cur.execute(
+            "INSERT OR IGNORE INTO licenses (license_key) VALUES ('LIC-ABC-12345')"
+        )
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({"status": "key added"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
 
 # =========================================================
 # 🚀 RUN APP
