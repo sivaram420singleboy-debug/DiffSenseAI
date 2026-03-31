@@ -6,6 +6,7 @@ import os
 # =========================================================
 DB_PATH = os.getenv("DB_PATH", "/opt/render/project/src/server_api/database/db.sqlite3")
 print("📂 LICENSE MODEL DB:", DB_PATH)
+print("🔥 MODEL DB:", DB_PATH)
 
 
 # =========================================================

@@ -9,8 +9,9 @@ app = Flask(__name__)
 # 🔥 DATABASE PATH (RENDER SAFE FIX)
 # =========================================================
 # 👉 IMPORTANT: /app remove pannirukom
-DB_PATH = os.getenv("DB_PATH", "licenses.db")
+DB_PATH = "server_api/database/db.sqlite3"
 print("📂 USING DB PATH:", DB_PATH)
+print("🔥 APP DB:", DB_PATH)
 
 
 # =========================================================

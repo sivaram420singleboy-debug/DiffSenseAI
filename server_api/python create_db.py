@@ -2,9 +2,8 @@ from flask import Flask, request, jsonify
 import sqlite3
 
 app = Flask(__name__)
-
 def get_db():
-    return sqlite3.connect("licenses.db")
+    return sqlite3.connect("server_api/database/db.sqlite3")
 
 @app.route("/activate", methods=["POST"])
 def activate():
