@@ -8,16 +8,26 @@ API_URL = "https://diffsenseai-ai.onrender.com/api/license/activate"
 TIMEOUT = 10
 
 
+# =========================================================
+# ✅ CHECK LICENSE EXIST
+# =========================================================
 def is_activated():
     return os.path.exists(LICENSE_FILE)
 
 
+# =========================================================
+# 💾 SAVE LICENSE
+# =========================================================
 def save_license(data):
     os.makedirs("storage", exist_ok=True)
     with open(LICENSE_FILE, "w") as f:
         json.dump(data, f)
+    print("💾 License saved locally")
 
 
+# =========================================================
+# 📂 LOAD LICENSE
+# =========================================================
 def load_license():
     try:
         with open(LICENSE_FILE) as f:
@@ -26,8 +36,15 @@ def load_license():
         return None
 
 
+# =========================================================
+# 🔥 MAIN ACTIVATION FUNCTION (FINAL DEBUG VERSION)
+# =========================================================
 def activate_license(key):
     machine = get_machine_id()
+
+    print("🔑 KEY:", key)
+    print("💻 MACHINE ID:", machine)
+    print("🌐 API:", API_URL)
 
     try:
         res = requests.post(
@@ -39,47 +56,90 @@ def activate_license(key):
             timeout=TIMEOUT
         )
 
-        print("🌐 SERVER RESPONSE:", res.text)
+        # 🔥 DEBUG OUTPUT
+        print("🌐 STATUS CODE:", res.status_code)
+        print("🌐 RAW RESPONSE:", res.text)
 
-        data = res.json()
+        # 🔥 SAFE JSON PARSE
+        try:
+            data = res.json()
+        except:
+            print("❌ JSON PARSE FAILED")
+            return "Invalid server response ❌"
 
     except requests.exceptions.Timeout:
-        return "timeout"
+        print("❌ TIMEOUT ERROR")
+        return "Server Timeout ❌"
 
     except requests.exceptions.ConnectionError:
-        return "no_server"
+        print("❌ CONNECTION ERROR")
+        return "Server Not Running ❌"
 
     except Exception as e:
-        return f"error:{str(e)}"
+        print("❌ UNKNOWN ERROR:", str(e))
+        return f"Error ❌: {str(e)}"
 
-    status = data.get("status", "").lower()
+    # =========================================================
+    # 🔍 HANDLE RESPONSE
+    # =========================================================
+    status = data.get("status") or data.get("message")
 
+    if not status:
+        print("❌ INVALID RESPONSE FORMAT:", data)
+        return "Invalid response ❌"
+
+    status = str(status).lower()
+    print("🔍 FINAL STATUS:", status)
+
+    # =========================================================
+    # ✅ SUCCESS
+    # =========================================================
     if status in ["activated", "already_activated"]:
         save_license({
             "key": key,
             "machine": machine
         })
-        return "success"
+        print("✅ ACTIVATION SUCCESS")
+        return True
 
+    # =========================================================
+    # ❌ INVALID KEY
+    # =========================================================
     if status == "invalid":
-        return "invalid"
+        print("❌ INVALID KEY")
+        return "Invalid License ❌"
 
+    # =========================================================
+    # ❌ USED IN OTHER PC
+    # =========================================================
     if status == "used_in_other_pc":
-        return "used"
+        print("❌ USED IN OTHER PC")
+        return "Used in another PC ❌"
 
-    return "unknown"
+    # =========================================================
+    # ❌ UNKNOWN
+    # =========================================================
+    print("❌ UNKNOWN STATUS:", status)
+    return f"Unknown Error ❌ ({status})"
 
 
+# =========================================================
+# ✅ LOCAL VALIDATION (OFFLINE SUPPORT)
+# =========================================================
 def validate_local():
     if not is_activated():
+        print("❌ No license file")
         return False
 
     data = load_license()
 
     if not data:
+        print("❌ License file corrupted")
         return False
 
     if data.get("machine") != get_machine_id():
+        print("❌ Machine mismatch")
         return False
 
+    print("✅ Local validation success")
     return True
