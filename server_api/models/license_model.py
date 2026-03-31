@@ -1,8 +1,15 @@
 from server_api.utils.db_helper import get_connection
+import os
+
+# =========================================================
+# 🔥 SINGLE DB SOURCE (SYNC WITH db_helper)
+# =========================================================
+DB_PATH = os.getenv("DB_PATH", "/opt/render/project/src/server_api/database/db.sqlite3")
+print("📂 LICENSE MODEL DB:", DB_PATH)
 
 
 # =========================================================
-# 🔥 INIT DB (SAFE - NO CRASH)
+# 🔥 INIT DB (SAFE)
 # =========================================================
 def init_db():
     conn = get_connection()
@@ -36,27 +43,33 @@ def init_db():
 
 
 # =========================================================
-# 🔥 CREATE LICENSE
+# 🔥 CREATE LICENSE (FIXED + DEBUG)
 # =========================================================
 def create_license(key, expiry):
     conn = get_connection()
 
     if conn is None:
+        print("❌ DB CONNECTION FAILED")
         return {"status": "db_error"}
 
     cursor = conn.cursor()
 
     try:
+        print("📥 INSERTING:", key, expiry)
+
         cursor.execute("""
             INSERT INTO licenses (license_key, is_used, machine_id, expiry_date)
             VALUES (?, 0, NULL, ?)
-        """, (key, expiry))
+        """, (key.strip(), expiry))
 
         conn.commit()
+
+        print("✅ LICENSE CREATED:", key)
+
         return {"status": "created"}
 
     except Exception as e:
-        print("⚠ Error creating license:", e)
+        print("❌ INSERT ERROR:", e)
         return {"status": "error"}
 
     finally:
@@ -65,7 +78,7 @@ def create_license(key, expiry):
 
 
 # =========================================================
-# 🔥 GET LICENSE
+# 🔥 GET LICENSE (FIXED)
 # =========================================================
 def get_license(key):
     conn = get_connection()
@@ -76,13 +89,21 @@ def get_license(key):
     cursor = conn.cursor()
 
     try:
+        clean_key = key.strip()
+
+        print("🔍 SEARCHING KEY:", clean_key)
+
         cursor.execute("""
             SELECT id, license_key, machine_id, is_used, expiry_date 
             FROM licenses 
             WHERE license_key=?
-        """, (key,))
+        """, (clean_key,))
 
-        return cursor.fetchone()
+        result = cursor.fetchone()
+
+        print("📊 DB RESULT:", result)
+
+        return result
 
     except Exception as e:
         print("❌ DB ERROR:", e)
@@ -105,13 +126,20 @@ def update_license(machine_id, key):
     cursor = conn.cursor()
 
     try:
+        clean_key = key.strip()
+
+        print("🔄 UPDATING LICENSE:", clean_key)
+
         cursor.execute("""
             UPDATE licenses
             SET machine_id=?, is_used=1
             WHERE license_key=?
-        """, (machine_id, key))
+        """, (machine_id, clean_key))
 
         conn.commit()
+
+        print("✅ LICENSE ACTIVATED")
+
         return True
 
     except Exception as e:
@@ -135,13 +163,18 @@ def reset_license(key):
     cursor = conn.cursor()
 
     try:
+        clean_key = key.strip()
+
+        print("♻ RESET LICENSE:", clean_key)
+
         cursor.execute("""
             UPDATE licenses
             SET machine_id=NULL, is_used=0
             WHERE license_key=?
-        """, (key,))
+        """, (clean_key,))
 
         conn.commit()
+
         return True
 
     except Exception as e:

@@ -6,48 +6,45 @@ from datetime import datetime, timedelta
 
 license_bp = Blueprint("license", __name__)
 
-# 🔥 DB DEBUG
 print("🔥 USING DB:", os.path.abspath("server_api/database/db.sqlite3"))
 
 
 # =========================================================
-# 🏠 ROOT CHECK
-# =========================================================
-@license_bp.route("/", methods=["GET"])
-def home():
-    return jsonify({
-        "status": "ok",
-        "message": "DiffSense AI License API Running 🚀"
-    })
-
-
-# =========================================================
-# 🔑 ACTIVATE LICENSE
+# 🔑 ACTIVATE LICENSE (FINAL FIXED)
 # =========================================================
 @license_bp.route("/activate", methods=["GET", "POST"])
 def activate():
     try:
-        # 🔥 SUPPORT BOTH GET + POST
+        # =================================================
+        # 🔥 GET / POST SUPPORT
+        # =================================================
         if request.method == "GET":
             key = request.args.get("LicenseKey")
             machine = request.args.get("MachineId")
         else:
             data = request.get_json(silent=True) or {}
-            key = data.get("LicenseKey")
-            machine = data.get("MachineId")
 
-        print("📥 LicenseKey:", key)
-        print("💻 MachineId:", machine)
+            print("📥 FULL JSON:", data)   # 🔥 DEBUG
 
+            # 🔥 SUPPORT BOTH KEY FORMATS (VERY IMPORTANT)
+            key = data.get("LicenseKey") or data.get("license_key")
+            machine = data.get("MachineId") or data.get("machine_id")
+
+        print("🔑 KEY:", key)
+        print("💻 MACHINE:", machine)
+
+        # =================================================
         # ❌ VALIDATION
+        # =================================================
         if not key or not machine:
             return jsonify({
                 "status": "invalid",
                 "message": "LicenseKey / MachineId missing"
             })
 
-        # 🔍 FETCH LICENSE
         lic = get_license(key)
+
+        print("🔎 DB RESULT:", lic)  # 🔥 DEBUG
 
         if not lic:
             return jsonify({
@@ -55,8 +52,16 @@ def activate():
                 "message": "License not found"
             })
 
-        # 👉 (id, key, machine_id, is_used, expiry_date)
-        _, license_key, db_machine, is_used, expiry = lic
+        # 👉 SAFE UNPACK (handle both 4/5 columns)
+        if len(lic) == 5:
+            _, license_key, db_machine, is_used, expiry = lic
+        else:
+            _, license_key, db_machine, is_used = lic
+            expiry = None
+
+        print("📊 DB MACHINE:", db_machine)
+        print("📊 IS USED:", is_used)
+        print("📊 EXPIRY:", expiry)
 
         # =================================================
         # ⏳ EXPIRY CHECK
@@ -78,38 +83,38 @@ def activate():
         # 🟢 FIRST ACTIVATION
         # =================================================
         if not is_used:
-            success = update_license(machine, key)
+            print("🟢 FIRST TIME ACTIVATION")
 
-            if success:
-                return jsonify({
-                    "status": "activated",
-                    "message": "License activated successfully"
-                })
-            else:
-                return jsonify({
-                    "status": "error",
-                    "message": "Failed to bind license"
-                })
+            update_license(machine, key)
+
+            return jsonify({
+                "status": "activated",
+                "message": "License activated successfully"
+            })
 
         # =================================================
-        # 🔁 SAME MACHINE
+        # 🔁 SAME PC
         # =================================================
         if db_machine == machine:
+            print("🔁 SAME MACHINE")
+
             return jsonify({
                 "status": "already_activated",
                 "message": "Already activated on this machine"
             })
 
         # =================================================
-        # ❌ OTHER MACHINE BLOCK
+        # ❌ OTHER PC
         # =================================================
+        print("❌ USED IN OTHER PC")
+
         return jsonify({
             "status": "used_in_other_pc",
             "message": "License already used on another device"
         })
 
     except Exception as e:
-        print("❌ ACTIVATE ERROR:", str(e))
+        print("❌ ERROR:", str(e))
 
         return jsonify({
             "status": "error",
@@ -127,20 +132,10 @@ def generate():
 
         days = int(data.get("days", 30))
 
-        # 🔑 UNIQUE KEY
         key = "DSAI-" + str(uuid.uuid4())[:8].upper()
-
         expiry = (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d")
 
-        print("🆕 Generating License:", key)
-
-        res = create_license(key, expiry)
-
-        if res.get("status") != "created":
-            return jsonify({
-                "status": "error",
-                "message": "License creation failed"
-            })
+        create_license(key, expiry)
 
         return jsonify({
             "status": "created",
@@ -149,28 +144,8 @@ def generate():
         })
 
     except Exception as e:
-        print("❌ GENERATE ERROR:", str(e))
+        print("❌ ERROR:", str(e))
 
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        })
-
-
-# =========================================================
-# 🔥 QUICK TEST ROUTE (REMOVE LATER)
-# =========================================================
-@license_bp.route("/add-test", methods=["GET"])
-def add_test():
-    try:
-        res = create_license("LIC-TEST-001", "2026-12-31")
-
-        return jsonify({
-            "status": "created",
-            "message": "Test license added"
-        })
-
-    except Exception as e:
         return jsonify({
             "status": "error",
             "message": str(e)
