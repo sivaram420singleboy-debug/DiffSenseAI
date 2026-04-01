@@ -1,35 +1,31 @@
-import sys
 import os
+import sys
 
-# 🔥 FIX PATH (EXE SUPPORT)
 def get_base_path():
     if getattr(sys, 'frozen', False):
         return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
-
+    return os.path.abspath(os.path.dirname(__file__))
 
 BASE_PATH = get_base_path()
+LICENSE_FILE = os.path.join(BASE_PATH, "license.txt")
 
-# 👉 ADD CURRENT FOLDER TO PATH
-sys.path.append(BASE_PATH)
+sys.path.insert(0, BASE_PATH)
 
-# 👉 IMPORTS (NOW SAFE)
-from core.license_manager import validate_local
-from ui.license_screen import open_license_screen
 from ui.main_screen import open_main_app
+from ui.license_screen import open_license_screen
+
+
+def is_activated():
+    return os.path.exists(LICENSE_FILE)
 
 
 def main():
-    try:
-        if validate_local():
-            print("✅ License OK → Main App")
-            open_main_app()
-        else:
-            print("🔑 Open License Screen")
-            open_license_screen(open_main_app)
-
-    except Exception as e:
-        print("❌ ERROR:", str(e))
+    if is_activated():
+        print("✅ License Found → Opening Main")
+        open_main_app()
+    else:
+        print("🔐 No License → Opening License Screen")
+        open_license_screen(open_main_app)
 
 
 if __name__ == "__main__":

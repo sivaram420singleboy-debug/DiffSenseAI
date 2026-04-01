@@ -1,16 +1,14 @@
-import sqlite3
+import psycopg2
 import os
 
-# 🔥 SINGLE DB PATH (ONLY THIS)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(BASE_DIR, "database", "db.sqlite3")
+# 🔥 GET DATABASE URL FROM RENDER ENV
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-print("🔥 FINAL DB PATH:", DB_PATH)
-print("🔥 MODEL DB:", DB_PATH)
+print("🔥 USING POSTGRES DB:", DATABASE_URL)
 
 def get_connection():
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = psycopg2.connect(DATABASE_URL)
         return conn
     except Exception as e:
         print("❌ DB CONNECTION ERROR:", e)

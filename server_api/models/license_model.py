@@ -1,135 +1,144 @@
-from server_api.utils.db_helper import get_connection
+import sqlite3
 import os
 
 # =========================================================
-# 🔥 SINGLE DB SOURCE (SYNC WITH db_helper)
+# 🔥 DB PATH (LOCAL + RENDER SAFE)
 # =========================================================
-DB_PATH = os.getenv("DB_PATH", "/opt/render/project/src/server_api/database/db.sqlite3")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.getenv(
+    "DB_PATH",
+    os.path.join(BASE_DIR, "..", "database", "db.sqlite3")
+)
+
+DB_PATH = os.path.abspath(DB_PATH)
+
 print("📂 LICENSE MODEL DB:", DB_PATH)
-print("🔥 MODEL DB:", DB_PATH)
 
 
 # =========================================================
-# 🔥 INIT DB (SAFE)
+# 🔥 GET CONNECTION (SAFE)
+# =========================================================
+def get_connection():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        return conn
+    except Exception as e:
+        print("❌ DB CONNECTION ERROR:", e)
+        return None
+
+
+# =========================================================
+# 🔥 INIT DB
 # =========================================================
 def init_db():
     conn = get_connection()
+    cur = conn.cursor()
 
-    if conn is None:
-        print("⚠ DB NOT CONNECTED → SKIPPING INIT")
-        return
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS licenses (
+        id SERIAL PRIMARY KEY,
+        license_key TEXT UNIQUE,
+        machine_id TEXT,
+        is_used INTEGER DEFAULT 0,
+        expiry_date TEXT,
+        activated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
 
-    cursor = conn.cursor()
+    conn.commit()
+    cur.close()
+    conn.close()
 
-    try:
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS licenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            license_key TEXT UNIQUE,
-            machine_id TEXT,
-            is_used INTEGER DEFAULT 0,
-            expiry_date TEXT
-        )
-        """)
-
-        conn.commit()
-        print("✅ SQLite DB Initialized")
-
-    except Exception as e:
-        print("❌ INIT ERROR:", e)
-
-    finally:
-        cursor.close()
-        conn.close()
+    print("✅ POSTGRES TABLE READY")
 
 
 # =========================================================
-# 🔥 CREATE LICENSE (FIXED + DEBUG)
+# 🔥 CREATE LICENSE
 # =========================================================
 def create_license(key, expiry):
     conn = get_connection()
 
-    if conn is None:
-        print("❌ DB CONNECTION FAILED")
+    if not conn:
         return {"status": "db_error"}
 
-    cursor = conn.cursor()
-
     try:
-        print("📥 INSERTING:", key, expiry)
+        cursor = conn.cursor()
+
+        clean_key = key.strip()
+
+        print("📥 INSERT:", clean_key, expiry)
 
         cursor.execute("""
-            INSERT INTO licenses (license_key, is_used, machine_id, expiry_date)
-            VALUES (?, 0, NULL, ?)
-        """, (key.strip(), expiry))
+            INSERT INTO licenses (license_key, machine_id, is_used, expiry_date)
+            VALUES (?, NULL, 0, ?)
+        """, (clean_key, expiry))
 
         conn.commit()
 
-        print("✅ LICENSE CREATED:", key)
-
         return {"status": "created"}
+
+    except sqlite3.IntegrityError:
+        return {"status": "exists"}
 
     except Exception as e:
         print("❌ INSERT ERROR:", e)
         return {"status": "error"}
 
     finally:
-        cursor.close()
         conn.close()
 
 
 # =========================================================
-# 🔥 GET LICENSE (FIXED)
+# 🔥 GET LICENSE
 # =========================================================
 def get_license(key):
     conn = get_connection()
 
-    if conn is None:
+    if not conn:
         return None
 
-    cursor = conn.cursor()
-
     try:
+        cursor = conn.cursor()
+
         clean_key = key.strip()
 
-        print("🔍 SEARCHING KEY:", clean_key)
+        print("🔍 FIND:", clean_key)
 
         cursor.execute("""
-            SELECT id, license_key, machine_id, is_used, expiry_date 
-            FROM licenses 
+            SELECT id, license_key, machine_id, is_used, expiry_date
+            FROM licenses
             WHERE license_key=?
         """, (clean_key,))
 
         result = cursor.fetchone()
 
-        print("📊 DB RESULT:", result)
+        print("📊 RESULT:", result)
 
         return result
 
     except Exception as e:
-        print("❌ DB ERROR:", e)
+        print("❌ GET ERROR:", e)
         return None
 
     finally:
-        cursor.close()
         conn.close()
 
 
 # =========================================================
-# 🔥 UPDATE LICENSE
+# 🔥 UPDATE LICENSE (ACTIVATE)
 # =========================================================
 def update_license(machine_id, key):
     conn = get_connection()
 
-    if conn is None:
+    if not conn:
         return False
 
-    cursor = conn.cursor()
-
     try:
+        cursor = conn.cursor()
+
         clean_key = key.strip()
 
-        print("🔄 UPDATING LICENSE:", clean_key)
+        print("🔄 ACTIVATE:", clean_key)
 
         cursor.execute("""
             UPDATE licenses
@@ -139,7 +148,11 @@ def update_license(machine_id, key):
 
         conn.commit()
 
-        print("✅ LICENSE ACTIVATED")
+        if cursor.rowcount == 0:
+            print("⚠ NO ROW UPDATED")
+            return False
+
+        print("✅ ACTIVATED")
 
         return True
 
@@ -148,7 +161,6 @@ def update_license(machine_id, key):
         return False
 
     finally:
-        cursor.close()
         conn.close()
 
 
@@ -158,15 +170,15 @@ def update_license(machine_id, key):
 def reset_license(key):
     conn = get_connection()
 
-    if conn is None:
+    if not conn:
         return False
 
-    cursor = conn.cursor()
-
     try:
+        cursor = conn.cursor()
+
         clean_key = key.strip()
 
-        print("♻ RESET LICENSE:", clean_key)
+        print("♻ RESET:", clean_key)
 
         cursor.execute("""
             UPDATE licenses
@@ -183,5 +195,4 @@ def reset_license(key):
         return False
 
     finally:
-        cursor.close()
         conn.close()

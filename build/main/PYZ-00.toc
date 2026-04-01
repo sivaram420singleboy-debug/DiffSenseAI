@@ -621,9 +621,9 @@
    'PYMODULE'),
   ('core', '-', 'PYMODULE'),
   ('core.license_manager',
-   'D:\\DiffSenseAI\\core\\license_manager.py',
+   'D:\\DiffSenseAI\\client_app\\core\\license_manager.py',
    'PYMODULE'),
-  ('core.machine', 'D:\\DiffSenseAI\\core\\machine.py', 'PYMODULE'),
+  ('core.machine', 'D:\\DiffSenseAI\\client_app\\core\\machine.py', 'PYMODULE'),
   ('csv',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\\Lib\\csv.py',
