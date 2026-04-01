@@ -1,20 +1,19 @@
 from flask import Flask, jsonify
 from server_api.routes.license_routes import license_bp
-from server_api.models.license_model import init_db
 import os
 import psycopg2
 
 app = Flask(__name__)
 
 # =========================================================
-# 🔥 DATABASE URL (FROM RENDER ENV)
+# 🔥 DATABASE URL (RENDER)
 # =========================================================
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 print("🔥 USING POSTGRES DB:", DATABASE_URL)
 
 # =========================================================
-# 🔥 INIT DB (POSTGRES)
+# 🔥 CREATE TABLE
 # =========================================================
 def create_table():
     try:
@@ -42,20 +41,16 @@ def create_table():
     except Exception as e:
         print("❌ DB ERROR:", e)
 
-
-# =========================================================
-# 🔥 INIT CALL
-# =========================================================
-print("🚀 Initializing DB...")
+# INIT
 create_table()
 
 # =========================================================
-# 🔗 ROUTES
+# ROUTES
 # =========================================================
 app.register_blueprint(license_bp, url_prefix="/api/license")
 
 # =========================================================
-# 🏠 ROOT
+# ROOT
 # =========================================================
 @app.route("/")
 def home():
@@ -65,14 +60,14 @@ def home():
     })
 
 # =========================================================
-# ❤️ HEALTH
+# HEALTH
 # =========================================================
 @app.route("/health")
 def health():
     return jsonify({"status": "ok"})
 
 # =========================================================
-# 🔥 DEBUG (POSTGRES)
+# DEBUG
 # =========================================================
 @app.route("/debug/licenses")
 def debug():
@@ -87,6 +82,7 @@ def debug():
         conn.close()
 
         return jsonify({
+            "source": "POSTGRES ✅",
             "count": len(rows),
             "data": rows
         })
@@ -94,9 +90,8 @@ def debug():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-
 # =========================================================
-# ➕ ADD KEY
+# ADD TEST KEY
 # =========================================================
 @app.route("/debug/add")
 def add():
@@ -119,9 +114,8 @@ def add():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-
 # =========================================================
-# 🚀 RUN
+# RUN
 # =========================================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
