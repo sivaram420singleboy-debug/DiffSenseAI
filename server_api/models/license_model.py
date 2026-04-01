@@ -3,9 +3,10 @@ import os
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# =========================================================
+
+# ============================
 # 🔥 GET CONNECTION
-# =========================================================
+# ============================
 def get_connection():
     try:
         return psycopg2.connect(DATABASE_URL)
@@ -13,43 +14,39 @@ def get_connection():
         print("❌ DB ERROR:", e)
         return None
 
-# =========================================================
-# 🔥 CREATE LICENSE
-# =========================================================
-def update_license(machine_id, key):
-    try:
-        import psycopg2
-        import os
 
-        DATABASE_URL = os.getenv("DATABASE_URL")
-        conn = psycopg2.connect(DATABASE_URL)
+# ============================
+# 🔥 CREATE LICENSE
+# ============================
+def create_license(key, expiry):
+    conn = get_connection()
+    if not conn:
+        return {"status": "db_error"}
+
+    try:
         cur = conn.cursor()
 
         cur.execute("""
-            UPDATE licenses
-            SET machine_id = %s,
-                status = 'Activated',
-                activated_at = NOW()
-            WHERE license_key = %s
-        """, (machine_id, key))
+            INSERT INTO licenses (license_key, expiry_date)
+            VALUES (%s, %s)
+            ON CONFLICT (license_key) DO NOTHING
+        """, (key.strip(), expiry))
 
         conn.commit()
 
-        if cur.rowcount == 0:
-            return False
-
-        return True
+        return {"status": "created"}
 
     except Exception as e:
-        print("❌ UPDATE ERROR:", e)
-        return False
+        print("❌ CREATE ERROR:", e)
+        return {"status": "error"}
 
     finally:
         conn.close()
 
-# =========================================================
+
+# ============================
 # 🔥 GET LICENSE
-# =========================================================
+# ============================
 def get_license(key):
     conn = get_connection()
     if not conn:
@@ -59,9 +56,9 @@ def get_license(key):
         cur = conn.cursor()
 
         cur.execute("""
-            SELECT id, license_key, machine_id, status
+            SELECT id, license_key, machine_id, status, expiry_date
             FROM licenses
-            WHERE license_key=%s
+            WHERE license_key = %s
         """, (key.strip(),))
 
         return cur.fetchone()
@@ -73,10 +70,11 @@ def get_license(key):
     finally:
         conn.close()
 
-# =========================================================
-# 🔥 ACTIVATE LICENSE
-# =========================================================
-def activate_license(machine_id, username, key):
+
+# ============================
+# 🔥 UPDATE LICENSE (ACTIVATE)
+# ============================
+def update_license(machine_id, key):
     conn = get_connection()
     if not conn:
         return False
@@ -86,26 +84,27 @@ def activate_license(machine_id, username, key):
 
         cur.execute("""
             UPDATE licenses
-            SET machine_id=%s,
-                username=%s,
-                status='Activated'
-            WHERE license_key=%s
-        """, (machine_id, username, key.strip()))
+            SET machine_id = %s,
+                status = 'Activated',
+                activated_at = NOW()
+            WHERE license_key = %s
+        """, (machine_id, key.strip()))
 
         conn.commit()
 
         return cur.rowcount > 0
 
     except Exception as e:
-        print("❌ ACTIVATE ERROR:", e)
+        print("❌ UPDATE ERROR:", e)
         return False
 
     finally:
         conn.close()
 
-# =========================================================
+
+# ============================
 # 🔁 RESET LICENSE
-# =========================================================
+# ============================
 def reset_license(key):
     conn = get_connection()
     if not conn:
@@ -116,10 +115,9 @@ def reset_license(key):
 
         cur.execute("""
             UPDATE licenses
-            SET machine_id=NULL,
-                username=NULL,
-                status='Non-Activated'
-            WHERE license_key=%s
+            SET machine_id = NULL,
+                status = 'Non-Activated'
+            WHERE license_key = %s
         """, (key.strip(),))
 
         conn.commit()
