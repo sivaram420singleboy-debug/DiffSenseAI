@@ -16,27 +16,33 @@ def get_connection():
 # =========================================================
 # 🔥 CREATE LICENSE
 # =========================================================
-def create_license(key):
-    conn = get_connection()
-    if not conn:
-        return {"status": "db_error"}
-
+def update_license(machine_id, key):
     try:
+        import psycopg2
+        import os
+
+        DATABASE_URL = os.getenv("DATABASE_URL")
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
 
         cur.execute("""
-            INSERT INTO licenses (license_key)
-            VALUES (%s)
-            ON CONFLICT (license_key) DO NOTHING
-        """, (key.strip(),))
+            UPDATE licenses
+            SET machine_id = %s,
+                status = 'Activated',
+                activated_at = NOW()
+            WHERE license_key = %s
+        """, (machine_id, key))
 
         conn.commit()
 
-        return {"status": "created"}
+        if cur.rowcount == 0:
+            return False
+
+        return True
 
     except Exception as e:
-        print("❌ CREATE ERROR:", e)
-        return {"status": "error"}
+        print("❌ UPDATE ERROR:", e)
+        return False
 
     finally:
         conn.close()
