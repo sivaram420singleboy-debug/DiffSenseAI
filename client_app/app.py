@@ -1,42 +1,43 @@
 from flask import Flask, jsonify
 from server_api.routes.license_routes import license_bp
+from server_api.models.license_model import init_db
 import os
-import sqlite3
+import psycopg2
 
 app = Flask(__name__)
 
 # =========================================================
-# 🔥 DATABASE PATH (FINAL SAFE)
+# 🔥 DATABASE URL (FROM RENDER ENV)
 # =========================================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "database", "db.sqlite3")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-print("📂 USING DB PATH:", DB_PATH)
+print("🔥 USING POSTGRES DB:", DATABASE_URL)
 
 # =========================================================
-# 🔥 INIT DB
+# 🔥 INIT DB (POSTGRES)
 # =========================================================
-def init_db():
+def create_table():
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
 
         cur.execute("""
         CREATE TABLE IF NOT EXISTS licenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             license_key TEXT UNIQUE,
             status TEXT DEFAULT 'Non-Activated',
             machine_id TEXT,
             username TEXT,
             company TEXT,
-            activated_at TEXT
+            activated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """)
 
         conn.commit()
+        cur.close()
         conn.close()
 
-        print("✅ DB Ready")
+        print("✅ POSTGRES TABLE READY")
 
     except Exception as e:
         print("❌ DB ERROR:", e)
@@ -46,7 +47,7 @@ def init_db():
 # 🔥 INIT CALL
 # =========================================================
 print("🚀 Initializing DB...")
-init_db()
+create_table()
 
 # =========================================================
 # 🔗 ROUTES
@@ -60,7 +61,7 @@ app.register_blueprint(license_bp, url_prefix="/api/license")
 def home():
     return jsonify({
         "message": "🚀 License Server Running",
-        "db": DB_PATH
+        "db": "PostgreSQL Connected"
     })
 
 # =========================================================
@@ -71,19 +72,27 @@ def health():
     return jsonify({"status": "ok"})
 
 # =========================================================
-# 🔥 DEBUG
+# 🔥 DEBUG (POSTGRES)
 # =========================================================
 @app.route("/debug/licenses")
 def debug():
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
 
-    cur.execute("SELECT * FROM licenses")
-    data = cur.fetchall()
+        cur.execute("SELECT * FROM licenses")
+        rows = cur.fetchall()
 
-    conn.close()
+        cur.close()
+        conn.close()
 
-    return jsonify({"data": data})
+        return jsonify({
+            "count": len(rows),
+            "data": rows
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 
 # =========================================================
@@ -91,15 +100,24 @@ def debug():
 # =========================================================
 @app.route("/debug/add")
 def add():
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
 
-    cur.execute("INSERT OR IGNORE INTO licenses (license_key) VALUES ('DSAI-TEST-001')")
+        cur.execute("""
+        INSERT INTO licenses (license_key)
+        VALUES ('DSAI-TEST-001')
+        ON CONFLICT (license_key) DO NOTHING
+        """)
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        cur.close()
+        conn.close()
 
-    return jsonify({"status": "added"})
+        return jsonify({"status": "added"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 
 # =========================================================
@@ -107,7 +125,4 @@ def add():
 # =========================================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host="0.0.0.0", port=port)
-    
-print("🚀 INIT DB...")
-init_db()
+    app.run(host="0.0.0.0", port=port)
